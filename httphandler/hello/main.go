@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 
 	"github.com/gcinterceptor/gci-go/httphandler"
@@ -16,11 +15,8 @@ func allocate() *[]byte {
 func main() {
 	hello := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		for i := 0; i < 10; i++ {
-			if allocate() == nil {
-				log.Println("problem allocating")
-			}
+			allocate()
 		}
-		fmt.Fprintf(w, "allocation succeeded")
 	})
 	http.Handle("/", httphandler.GCI(hello))
 	http.ListenAndServe(":3000", nil)

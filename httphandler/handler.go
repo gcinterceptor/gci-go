@@ -13,10 +13,10 @@ func GCI(next http.Handler) http.Handler {
 	gci := gccontrol.New()
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		sr := gci.Before()
-		defer gci.After()
-
+		defer gci.After(sr)
 		if sr.ShouldShed {
-			fmt.Fprintln(w, "Shed")
+			w.Header().Add("Retry-After", fmt.Sprintf("%.6f", sr.Unavailabity.Seconds()))
+			w.WriteHeader(http.StatusServiceUnavailable)
 			return
 		}
 		next.ServeHTTP(w, r)
