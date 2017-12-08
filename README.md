@@ -8,6 +8,23 @@ To tackle this problem, we have developed the Garbage Collector Control Intercep
 
 TODO(danielfireman): benchmark the gci-go version.
 
+## Installing GCI
+
+```sh
+go get -u github.com/gcinterceptor/gci-go/...
+```
+
+## Using GCI
+
+Let's say you you're building your cloud service using the Go's [net/http](https://golang.org/pkg/net/http/) package. To start using GCI simply wrap your service endpoint with [httphandler.GCI](https://godoc.org/github.com/gcinterceptor/gci-go/httphandler#GCI). For example, imagine your have a variable `hello`, which points to your endpoint [http.HandlerFunc](https://golang.org/pkg/net/http/#HandlerFunc):
+
+```go
+http.Handle("/", httphandler.GCI(hello))
+```
+
+A complete example [here](https://github.com/gcinterceptor/gci-go/blob/master/httphandler/hello/main.go).
+
+> Would to have GCI on your favourite framework? Please send us a PR or open an issue.
 
 ## Academic articles related to GCI
 
