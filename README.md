@@ -19,3 +19,4 @@ TODO(danielfireman): benchmark the gci-go version.
 
 * [Go GC: Prioritizing low latency and simplicity](https://blog.golang.org/go15gc)
 * [Go’s march to low-latency GC](https://blog.twitch.tv/gos-march-to-low-latency-gc-a6fa96f06eb7)
+* [Modern garbage collection: a look at the Go GC strategy](https://blog.plan99.net/modern-garbage-collection-911ef4f8bd8e)
