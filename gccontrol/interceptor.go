@@ -11,7 +11,8 @@ const (
 	waitForTrailers = 10 * time.Millisecond
 	// The arrival rate and the amount of resources to compute each request can vary
 	// a lot over time, keeping a long history might not improve the decision.
-	sampleSize = 5
+	sampleSize             = 5
+	unavailabilityPastSize = 5
 )
 
 // ShedResponse the response of processing a single request from GCInterceptor.
@@ -34,7 +35,7 @@ func New() *Interceptor {
 	debug.SetGCPercent(-1)
 	return &Interceptor{
 		sampler:   newSampler(sampleSize),
-		estimator: newUnavailabilityEstimator(),
+		estimator: newUnavailabilityEstimator(unavailabilityPastSize),
 		heap:      newHeap(),
 	}
 }
