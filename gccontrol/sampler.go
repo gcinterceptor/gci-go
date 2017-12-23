@@ -20,9 +20,10 @@ type sampler struct {
 	curr         int64   // Current sample size.
 }
 
-func newSampler(size int) *sampler {
-	p := make([]int64, size)
-	for i := 0; i < size; i++ {
+// newSampler creates a new sampler instance which is based on an history of size hs.
+func newSampler(hs int) *sampler {
+	p := make([]int64, hs)
+	for i := 0; i < hs; i++ {
 		p[i] = math.MaxInt64
 	}
 	return &sampler{
