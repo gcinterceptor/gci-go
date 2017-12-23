@@ -14,18 +14,21 @@ const (
 )
 
 type sampler struct {
-	lastFinished int64
-	curr         int64
-	count        int
-	past         []int64
+	next         int     // Next index in the past slice.
+	past         []int64 // History of sample size between collections.
+	lastFinished int64   // Last number of finished requests.
+	curr         int64   // Current sample size.
 }
 
-func newSampler() *sampler {
+// newSampler creates a new sampler instance which is based on an history of size hs.
+func newSampler(hs int) *sampler {
+	p := make([]int64, hs)
+	for i := 0; i < hs; i++ {
+		p[i] = math.MaxInt64
+	}
 	return &sampler{
 		curr: defaultSampleRate,
-		// The arrival rate and the amount of resources to compute each request can vary
-		// a lot over time, keeping a long history might not improve the decision.
-		past: []int64{math.MaxInt64, math.MaxInt64, math.MaxInt64, math.MaxInt64, math.MaxInt64},
+		past: p,
 	}
 }
 
@@ -34,13 +37,13 @@ func (s *sampler) get() int64 {
 }
 
 func (s *sampler) update(finished int64) {
-	defer func() { s.count++ }()
-	if s.count == 0 {
+	if s.lastFinished == 0 {
 		s.lastFinished = finished
 		return
 	}
 	// Update history.
-	s.past[s.count%len(s.past)] = finished - s.lastFinished
+	s.past[s.next] = finished - s.lastFinished
+	s.next = (s.next + 1) % len(s.past)
 	s.lastFinished = finished
 
 	// Get minimum value.
