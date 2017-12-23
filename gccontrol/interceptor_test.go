@@ -1,6 +1,7 @@
 package gccontrol
 
 import (
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -40,7 +41,7 @@ func TestInterceptor(t *testing.T) {
 	i.After(sr1)
 
 	for {
-		if i.doingGC == 0 {
+		if atomic.LoadInt32(&i.doingGC) == 0 {
 			break
 		}
 		time.Sleep(10 * time.Millisecond)
