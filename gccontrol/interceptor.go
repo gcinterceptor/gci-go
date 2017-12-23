@@ -46,8 +46,8 @@ func NewInterceptor() *Interceptor {
 // This class is thread-safe. It is meant to be used as singleton in highly
 // concurrent environment.
 type Interceptor struct {
-	incoming int64 // Total number of incoming requests to process (monotonically increasing.
-	finished int64 // Total number of processed requests (monotonically increasing).
+	incoming int64 // Total number of incoming requests to process since last GC.
+	finished int64 // Total number of processed requests since last GC.
 	doingGC  int32 // bool: 0 false | 1 true. Making it an int32 because of the atomic package.
 
 	sampler   *sampler
