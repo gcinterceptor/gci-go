@@ -5,30 +5,29 @@ import (
 	"time"
 )
 
-func newUnavailabilityEstimator() *unavailabilityEstimator {
+func newUnavailabilityEstimator(size int) *unavailabilityEstimator {
 	return &unavailabilityEstimator{
-		gcPast:  []time.Duration{0, 0, 0, 0, 0},
-		reqPast: []time.Duration{0, 0, 0, 0, 0},
+		gcPast:  make([]time.Duration, size),
+		reqPast: make([]time.Duration, size),
 	}
 }
 
 type unavailabilityEstimator struct {
-	gcCount      int
-	gcEstimation time.Duration
-	gcStart      time.Time
-	gcPast       []time.Duration
+	gcNext       int             // Next index in gcPast.
+	gcEstimation time.Duration   // Current estimation of the next GC duration.
+	gcStart      time.Time       // Last GC start time.
+	gcPast       []time.Duration // History of garbage collection duration estimations.
 
-	reqCount        int
-	reqPast         []time.Duration
-	reqMean, reqVar float64 // Request statistics in nanoseconds. Made them float to make math easier.
-	reqEstimation   time.Duration
+	reqCount        int             // Number of requests finished since last collection.
+	reqPast         []time.Duration // History of request duration estimations.
+	reqMean, reqVar float64         // Request statistics in nanoseconds. Made them float to make math easier.
+	reqEstimation   time.Duration   // Current request duration estimation.
 }
 
 func (u *unavailabilityEstimator) gcFinished(d time.Duration) {
 	// Estimate GC duration.
-	u.gcPast[u.gcCount%len(u.gcPast)] = d
+	u.gcPast[u.gcNext] = d
 	u.gcEstimation = maxDuration(u.gcPast)
-	u.gcCount++
 
 	// Estimate the time processing a request.
 	// Using 68–95–99.7 rule to have a good coverage on the request size.
@@ -37,11 +36,12 @@ func (u *unavailabilityEstimator) gcFinished(d time.Duration) {
 	if u.reqCount > 1 {
 		stdDev = math.Sqrt(u.reqVar) / float64(u.reqCount-1)
 	}
-	u.reqPast[u.gcCount%len(u.reqPast)] = time.Duration(u.reqMean+(3*stdDev)) * time.Nanosecond
+	u.reqPast[u.gcNext] = time.Duration(u.reqMean+(3*stdDev)) * time.Nanosecond
 	u.reqEstimation = maxDuration(u.reqPast)
 	u.reqCount = 0
 	u.reqMean = 0
 	u.reqVar = 0
+	u.gcNext = (u.gcNext + 1) % len(u.gcPast)
 }
 
 func (u *unavailabilityEstimator) estimate(queueSize int64) time.Duration {
