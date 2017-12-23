@@ -11,8 +11,8 @@ const (
 	waitForTrailers = 10 * time.Millisecond
 	// The arrival rate and the amount of resources to compute each request can vary
 	// a lot over time, keeping a long history might not improve the decision.
-	sampleSize             = 5
-	unavailabilityPastSize = 5
+	sampleHistorySize         = 5
+	unavailabilityHistorySize = 5
 )
 
 // ShedResponse the response of processing a single request from GCInterceptor.
@@ -29,13 +29,13 @@ type ShedResponse struct {
 	startTime time.Time
 }
 
-// New returns a new Interceptor instance.
+// NewInterceptor returns a new Interceptor instance.
 // Important to notice that runtime's GC will be switched off before the instance is created/returned.
-func New() *Interceptor {
+func NewInterceptor() *Interceptor {
 	debug.SetGCPercent(-1)
 	return &Interceptor{
-		sampler:   newSampler(sampleSize),
-		estimator: newUnavailabilityEstimator(unavailabilityPastSize),
+		sampler:   newSampler(sampleHistorySize),
+		estimator: newUnavailabilityEstimator(unavailabilityHistorySize),
 		heap:      newHeap(),
 	}
 }
@@ -46,7 +46,7 @@ func New() *Interceptor {
 // This class is thread-safe. It is meant to be used as singleton in highly
 // concurrent environment.
 type Interceptor struct {
-	incoming int64 // Total number of incoming requests (monotonically increasing).
+	incoming int64 // Total number of incoming requests to process (monotonically increasing.
 	finished int64 // Total number of processed requests (monotonically increasing).
 	doingGC  int32 // bool: 0 false | 1 true. Making it an int32 because of the atomic package.
 
@@ -58,8 +58,6 @@ type Interceptor struct {
 // Before must be invoked before the request is processed by the service instance.
 // It is strongly recommened that this is the first method called in the request processing chain.
 func (i *Interceptor) Before() ShedResponse {
-	atomic.AddInt64(&i.incoming, 1)
-
 	// The service is unavailable.
 	if atomic.LoadInt32(&i.doingGC) == 1 {
 		return i.shed()
@@ -89,6 +87,10 @@ func (i *Interceptor) Before() ShedResponse {
 				i.heap.collect()
 				i.estimator.gcFinished(time.Now().Sub(gcStart))
 
+				// Zeroing counters.
+				atomic.StoreInt64(&i.incoming, 0)
+				atomic.StoreInt64(&i.finished, 0)
+
 				// Finishing unavailability period.
 				atomic.StoreInt32(&i.doingGC, 0)
 				fmt.Printf("End %+v -- %+v -- %+v\n\n", i.sampler, i.heap, i.estimator)
@@ -96,6 +98,7 @@ func (i *Interceptor) Before() ShedResponse {
 			return i.shed()
 		}
 	}
+	atomic.AddInt64(&i.incoming, 1)
 	return dontShed
 }
 
@@ -108,8 +111,8 @@ func (i *Interceptor) shed() ShedResponse {
 // After must be called before the response is set to the client.
 // It is strongly recommened that this is the last method called in the request processing chain.
 func (i *Interceptor) After(r ShedResponse) {
-	atomic.AddInt64(&i.finished, 1)
 	if !r.ShouldShed {
+		atomic.AddInt64(&i.finished, 1)
 		i.estimator.requestFinished(time.Now().Sub(r.startTime))
 	}
 }
