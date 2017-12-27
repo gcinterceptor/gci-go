@@ -27,9 +27,10 @@ By @danielfireman
 * Go: go1.8 linux/amd64
 * GCI-go: v0.1
 * SO: Ubuntu 16.04.3 LTS (xenial)
+* Bench: windowSize 200000, msgCount 1000000
 * Server: 4GB RAM, 2 vCPUs, 2397.222 MHz (4794.44 bogomips), 4096 KB cache size
 
-**Summary**
+**Summary: Worst push time**
 
 |Statistic|GCI Off (ms)  |GCI On (ms) | Improvement (%) |
 |---------|------------- |------------|-----------------|
