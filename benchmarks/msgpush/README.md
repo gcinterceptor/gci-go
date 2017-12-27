@@ -31,6 +31,11 @@ By @danielfireman
 
 **Summary**
 
+|Statistic|GCI Off (ms)  |GCI On (ms) | Improvement (%) |
+|---------|------------- |------------|-----------------|
+|Median   |	13704.544    |4957.355    |63.82%           |
+|Average  |	13642.15321  |4963.28354  |63.61            |
+|Std Dev  |	1889.425185  |1314.098334 |30.44%           |
 
 **CSV files**
 * [GCI off](https://github.com/gcinterceptor/gci-go/blob/master/benchmarks/msgpush/2017_12_27_nogci.csv)
