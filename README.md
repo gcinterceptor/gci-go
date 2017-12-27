@@ -33,7 +33,7 @@ A complete example [here](https://github.com/gcinterceptor/gci-go/blob/master/ht
 **Using Load Shedding to Fight Tail-Latency on Runtime-Based Services**. Fireman, D.; Lopes, R; Brunet, J. XXIX Simpósio Brasileiro de Redes de Computadores e Sistemas Distribuídos (SBRC).
 
 ## Blog posts related to Go runtime memory management/GC
-
+* [Golang’s Real-time GC in Theory and Practice](https://making.pusher.com/golangs-real-time-gc-in-theory-and-practice/)
 * [Go GC: Prioritizing low latency and simplicity](https://blog.golang.org/go15gc)
 * [Go’s march to low-latency GC](https://blog.twitch.tv/gos-march-to-low-latency-gc-a6fa96f06eb7)
 * [Modern garbage collection: a look at the Go GC strategy](https://blog.plan99.net/modern-garbage-collection-911ef4f8bd8e)
