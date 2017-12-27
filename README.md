@@ -6,7 +6,17 @@ Modern cloud web services developed in [Go](golang.org) execute on top of a runt
 
 To tackle this problem, we have developed the Garbage Collector Control Interceptor (GCI) -- a request interceptor agnostic regarding the cloud service the load it is subjected load to. GCI helps to improve the service time of cloud services by controlling GC interventions and using simple load shedding mechanisms to signal load balancers or other clients, preventing serving requests during these interventions.
 
-TODO(danielfireman): benchmark the gci-go version.
+## Performance
+
+**Message Push benchmark**
+
+|Statistic|GCI Off (ms)  |GCI On (ms) | Improvement (%) |
+|---------|------------- |------------|-----------------|
+|Median   |	13704.544    |4957.355    |63.82%           |
+|Average  |	13642.15321  |4963.28354  |63.61            |
+|Std Dev  |	1889.425185  |1314.098334 |30.44%           |
+
+More information and detailed benchmark results can be found [here](https://github.com/gcinterceptor/gci-go/tree/master/benchmarks/msgpush).
 
 ## Installing GCI
 
