@@ -4,7 +4,7 @@
 
 Modern cloud web services developed in [Go](golang.org) execute on top of a runtime environment. On the one hand, Go runtime provide several off-the-shelf benefits like code security and cross-platform execution. On the other side, runtime's internal routines such as automatic memory management add a non-deterministic overhead to the overall service time, increasing the tail of the service time distribution. In this context, it is well known that the Garbage Collector is among the leading causes of high tail latency.
 
-To tackle this problem, we have developed the Garbage Collector Control Interceptor (GCI) -- a request interceptor agnostic regarding the cloud service the load it is subjected load too. GCI helps to improve the service time of cloud services by controlling GC interventions and using simple load shedding mechanisms to signal load balancers or other clients, preventing serving requests during these interventions.
+To tackle this problem, we have developed the Garbage Collector Control Interceptor (GCI) -- a request interceptor agnostic regarding the cloud service the load it is subjected load to. GCI helps to improve the service time of cloud services by controlling GC interventions and using simple load shedding mechanisms to signal load balancers or other clients, preventing serving requests during these interventions.
 
 TODO(danielfireman): benchmark the gci-go version.
 

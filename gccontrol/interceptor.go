@@ -1,7 +1,6 @@
 package gccontrol
 
 import (
-	"fmt"
 	"runtime/debug"
 	"sync/atomic"
 	"time"
@@ -64,14 +63,12 @@ func (i *Interceptor) Before() ShedResponse {
 	}
 	dontShed := ShedResponse{ShouldShed: false, startTime: time.Now()}
 	if atomic.LoadInt64(&i.incoming)%i.sampler.get() == 0 {
-		fmt.Printf("Check %+v --- %+v -- %+v\n\n", i.sampler, i.heap, i.estimator)
 		if i.heap.check() {
 			// Starting unavailability period.
 			if !atomic.CompareAndSwapInt32(&i.doingGC, 0, 1) { // If the value was already 1, shed.
 				return i.shed()
 			}
 			go func() {
-				fmt.Printf("Begin %+v --- %+v -- %+v\n\n", i.sampler, i.heap, i.estimator)
 				finished := atomic.LoadInt64(&i.finished)
 				incoming := atomic.LoadInt64(&i.incoming)
 				// Updating sample rate.
@@ -93,7 +90,6 @@ func (i *Interceptor) Before() ShedResponse {
 
 				// Finishing unavailability period.
 				atomic.StoreInt32(&i.doingGC, 0)
-				fmt.Printf("End %+v -- %+v -- %+v\n\n", i.sampler, i.heap, i.estimator)
 			}()
 			return i.shed()
 		}
