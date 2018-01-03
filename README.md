@@ -10,6 +10,8 @@ To tackle this problem, we have developed the Garbage Collector Control Intercep
 
 **Message Push benchmark**
 
+Worst message push service time
+
 |Statistic|GCI Off (ms)  |GCI On (ms) | Improvement (%) |
 |---------|------------- |------------|-----------------|
 |Median   |	13704.544    |4957.355    |63.82%           |
