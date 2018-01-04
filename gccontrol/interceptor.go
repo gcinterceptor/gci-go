@@ -80,9 +80,9 @@ func (i *Interceptor) Before() ShedResponse {
 				}
 
 				// Collecting garbage.
-				gcStart := time.Now()
+				i.estimator.gcStarted()
 				i.heap.collect()
-				i.estimator.gcFinished(time.Now().Sub(gcStart))
+				i.estimator.gcFinished()
 
 				// Zeroing counters.
 				atomic.StoreInt64(&i.incoming, 0)
