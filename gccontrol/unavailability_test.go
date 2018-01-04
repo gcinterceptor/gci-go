@@ -14,10 +14,13 @@ func TestUnavailabilityEstimator(t *testing.T) {
 	mockClock := clock.NewMock()
 	e.clock = mockClock // Replacing a mock clock.
 
-	// Usual flow, n requests and a GC.
 	e.requestFinished(2 * time.Millisecond)
 	e.requestFinished(2 * time.Millisecond)
 
+	// First request shed: no GC has yet finished.
+	is.Equal(2*time.Millisecond, e.estimate(1))
+
+	// Usual flow: After processing some requests, GC kicks in.
 	e.gcStarted()
 	mockClock.Add(3 * time.Second)
 	e.gcFinished()

@@ -45,14 +45,8 @@ func (u *unavailabilityEstimator) gcFinished() {
 	u.gcPast[u.gcNext] = u.clock.Now().Sub(*u.gcStart).Nanoseconds()
 	atomic.StoreInt64(&u.gcEstimation, maxDuration(u.gcPast))
 
-	// Estimate the time processing a request.
-	// Using 68–95–99.7 rule to have a good coverage on the request size.
-	// https://en.wikipedia.org/wiki/68%E2%80%9395%E2%80%9399.7_rule
-	stdDev := float64(0)
-	if u.reqCount > 1 {
-		stdDev = math.Sqrt(u.reqVar) / float64(u.reqCount-1)
-	}
-	u.reqPast[u.gcNext] = int64(u.reqMean + (3 * stdDev))
+	// Estimate request duration.
+	u.reqPast[u.gcNext] = u.estimateReqDuration()
 	atomic.StoreInt64(&u.reqEstimation, maxDuration(u.reqPast))
 
 	u.reqCount = 0
@@ -62,10 +56,26 @@ func (u *unavailabilityEstimator) gcFinished() {
 	u.gcStart = nil
 }
 
+func (u *unavailabilityEstimator) estimateReqDuration() int64 {
+	// Estimate the time processing a request.
+	// Using 68–95–99.7 rule to have a good coverage on the request size.
+	// https://en.wikipedia.org/wiki/68%E2%80%9395%E2%80%9399.7_rule
+	stdDev := float64(0)
+	if u.reqCount > 1 {
+		stdDev = math.Sqrt(u.reqVar) / float64(u.reqCount-1)
+	}
+	return int64(u.reqMean + (3 * stdDev))
+}
+
 func (u *unavailabilityEstimator) estimate(queueSize int64) time.Duration {
-	trailingReqs := queueSize * atomic.LoadInt64(&u.reqEstimation)
-	if trailingReqs < 0 {
-		trailingReqs = 0
+	trailingReqs := int64(0)
+	if queueSize > 0 {
+		reqDur := atomic.LoadInt64(&u.reqEstimation)
+		// This can happen at the very first call (no GC has yet happened).
+		if reqDur == 0 {
+			reqDur = u.estimateReqDuration()
+		}
+		trailingReqs = queueSize * reqDur
 	}
 	diff := time.Duration(0)
 	if u.gcStart != nil {

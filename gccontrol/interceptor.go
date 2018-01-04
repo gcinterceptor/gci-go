@@ -1,9 +1,12 @@
 package gccontrol
 
 import (
+	"fmt"
 	"runtime/debug"
 	"sync/atomic"
 	"time"
+
+	"github.com/benbjohnson/clock"
 )
 
 const (
@@ -12,6 +15,7 @@ const (
 	// a lot over time, keeping a long history might not improve the decision.
 	sampleHistorySize         = 5
 	unavailabilityHistorySize = 5
+	heapHistorySize           = 5
 )
 
 // ShedResponse the response of processing a single request from GCInterceptor.
@@ -33,9 +37,10 @@ type ShedResponse struct {
 func NewInterceptor() *Interceptor {
 	debug.SetGCPercent(-1)
 	return &Interceptor{
+		clock:     clock.New(),
 		sampler:   newSampler(sampleHistorySize),
 		estimator: newUnavailabilityEstimator(unavailabilityHistorySize),
-		heap:      newHeap(),
+		heap:      newHeap(heapHistorySize),
 	}
 }
 
@@ -45,13 +50,15 @@ func NewInterceptor() *Interceptor {
 // This class is thread-safe. It is meant to be used as singleton in highly
 // concurrent environment.
 type Interceptor struct {
+	clock clock.Clock // Internal clock, making it easier to test with time.
+
 	incoming int64 // Total number of incoming requests to process since last GC.
 	finished int64 // Total number of processed requests since last GC.
 	doingGC  int32 // bool: 0 false | 1 true. Making it an int32 because of the atomic package.
 
 	sampler   *sampler
 	estimator *unavailabilityEstimator
-	heap      *heap
+	heap      heap
 }
 
 // Before must be invoked before the request is processed by the service instance.
@@ -61,27 +68,28 @@ func (i *Interceptor) Before() ShedResponse {
 	if atomic.LoadInt32(&i.doingGC) == 1 {
 		return i.shed()
 	}
-	dontShed := ShedResponse{ShouldShed: false, startTime: time.Now()}
-	if atomic.LoadInt64(&i.incoming)%i.sampler.get() == 0 {
-		if i.heap.check() {
+	dontShed := ShedResponse{ShouldShed: false, startTime: i.clock.Now()}
+	if (atomic.LoadInt64(&i.incoming)+1)%i.sampler.get() == 0 {
+		if i.heap.ShouldCollect() {
 			// Starting unavailability period.
 			if !atomic.CompareAndSwapInt32(&i.doingGC, 0, 1) { // If the value was already 1, shed.
 				return i.shed()
 			}
 			go func() {
-				finished := atomic.LoadInt64(&i.finished)
 				incoming := atomic.LoadInt64(&i.incoming)
+				finished := atomic.LoadInt64(&i.finished)
+
 				// Updating sample rate.
 				i.sampler.update(finished)
 
 				// Wait for the queue to be consumed.
 				for finished < incoming {
-					time.Sleep(waitForTrailers)
+					i.clock.Sleep(waitForTrailers)
 				}
 
 				// Collecting garbage.
 				i.estimator.gcStarted()
-				i.heap.collect()
+				i.heap.Collect()
 				i.estimator.gcFinished()
 
 				// Zeroing counters.
@@ -101,7 +109,8 @@ func (i *Interceptor) Before() ShedResponse {
 func (i *Interceptor) shed() ShedResponse {
 	finished := atomic.LoadInt64(&i.finished)
 	incoming := atomic.LoadInt64(&i.incoming)
-	return ShedResponse{ShouldShed: true, Unavailabity: i.estimator.estimate(finished - incoming)}
+	fmt.Println("Queue SiZE:", incoming-finished)
+	return ShedResponse{ShouldShed: true, Unavailabity: i.estimator.estimate(incoming - finished)}
 }
 
 // After must be called before the response is set to the client.
@@ -109,6 +118,6 @@ func (i *Interceptor) shed() ShedResponse {
 func (i *Interceptor) After(r ShedResponse) {
 	if !r.ShouldShed {
 		atomic.AddInt64(&i.finished, 1)
-		i.estimator.requestFinished(time.Now().Sub(r.startTime))
+		i.estimator.requestFinished(i.clock.Now().Sub(r.startTime))
 	}
 }
