@@ -84,6 +84,8 @@ func (i *Interceptor) Before() ShedResponse {
 				// Wait for the queue to be consumed.
 				for finished < incoming {
 					i.clock.Sleep(waitForTrailers)
+					incoming = atomic.LoadInt64(&i.incoming)
+					finished = atomic.LoadInt64(&i.finished)
 				}
 
 				// Collecting garbage.

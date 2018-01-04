@@ -1,6 +1,8 @@
 package gccontrol
 
 import (
+	"runtime"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -19,7 +21,9 @@ func (h *fakeHeap) ShouldCollect() bool {
 	return h.shouldCollect
 }
 
-func (h *fakeHeap) Collect() { h.hasCollected = true }
+func (h *fakeHeap) Collect() {
+	h.hasCollected = true
+}
 
 func (h *fakeHeap) Reset() {
 	h.hasCollected = false
@@ -68,6 +72,32 @@ func TestInterceptor(t *testing.T) {
 	is.True(r2.ShouldShed) // Sampling and GC time.
 	is.Equal(time.Millisecond, r2.Unavailabity)
 
+	runtime.Gosched() // Yielding the processor to the cleaning goroutine.
+	for {
+		if atomic.LoadInt32(&i.doingGC) == 1 {
+			break
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+
+	r3 := i.Before()
+	is.True(r2.ShouldShed) // GC is happening.
+	is.Equal(time.Millisecond, r2.Unavailabity)
+
 	i.After(r1)
 	i.After(r2)
+	i.After(r3)
+
+	// Wait a bit until everything finishes.
+	clock.Add(waitForTrailers)
+	for {
+		if atomic.LoadInt32(&i.doingGC) == 0 {
+			break
+		}
+		time.Sleep(1 * time.Millisecond)
+	}
+
+	sr = i.Before()
+	is.True(!sr.ShouldShed)
+	i.After(sr)
 }
