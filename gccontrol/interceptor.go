@@ -1,7 +1,6 @@
 package gccontrol
 
 import (
-	"fmt"
 	"runtime/debug"
 	"sync/atomic"
 	"time"
@@ -109,7 +108,6 @@ func (i *Interceptor) Before() ShedResponse {
 func (i *Interceptor) shed() ShedResponse {
 	finished := atomic.LoadInt64(&i.finished)
 	incoming := atomic.LoadInt64(&i.incoming)
-	fmt.Println("Queue SiZE:", incoming-finished)
 	return ShedResponse{ShouldShed: true, Unavailabity: i.estimator.estimate(incoming - finished)}
 }
 
