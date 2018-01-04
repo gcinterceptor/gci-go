@@ -55,9 +55,11 @@ func (s *sampler) update(finished int64) {
 	}
 
 	// Apply bounds.
-	if min > maxSampleRate { // NOTE: we could use math.Min. We tried that, but it leads to a lot of type casting.
-		atomic.StoreInt64(&s.curr, maxSampleRate)
-	} else {
-		atomic.StoreInt64(&s.curr, min)
+	if min > 0 {
+		if min > maxSampleRate { // NOTE: we could use math.Min. We tried that, but it leads to a lot of type casting.
+			atomic.StoreInt64(&s.curr, maxSampleRate)
+		} else {
+			atomic.StoreInt64(&s.curr, min)
+		}
 	}
 }
