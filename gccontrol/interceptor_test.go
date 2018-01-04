@@ -2,6 +2,7 @@ package gccontrol
 
 import (
 	"runtime"
+	"runtime/debug"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -100,4 +101,77 @@ func TestInterceptor(t *testing.T) {
 	sr = i.Before()
 	is.True(!sr.ShouldShed)
 	i.After(sr)
+}
+
+const msgSize = 100 * 1024
+
+func messagePush(i int) {
+	const windowSize = 200000
+	var buffer [windowSize][]byte
+	m := make([]byte, msgSize)
+	for i := range m {
+		m[i] = byte(i)
+	}
+	buffer[i%windowSize] = m
+}
+
+func benchmarkMessagePushNoGCI(msgSize int64, b *testing.B) {
+	// From: https://golang.org/pkg/runtime/debug/#SetGCPercent
+	// "The initial setting is the value of the GOGC environment variable at startup, or 100 if the variable is not set."
+	debug.SetGCPercent(100)
+	b.StopTimer()
+	b.SetBytes(msgSize)
+	for i := 0; i < b.N; i++ {
+		b.StartTimer()
+		messagePush(i)
+		b.StopTimer()
+	}
+}
+
+func benchmarkMessagePushGCI(msgSize int64, b *testing.B) {
+	b.StopTimer()
+	b.SetBytes(msgSize)
+	gci := NewInterceptor()
+	defer debug.SetGCPercent(100) // Returning GC config to its default.
+	for i := 0; i < b.N; i++ {
+		sr := gci.Before()
+		if sr.ShouldShed {
+			time.Sleep(sr.Unavailabity)
+		}
+		b.StartTimer()
+		messagePush(i)
+		b.StopTimer()
+		gci.After(sr)
+	}
+}
+
+func BenchmarkMessagePush_GCI1KB(b *testing.B) {
+	benchmarkMessagePushGCI(1024, b)
+}
+
+func BenchmarkMessagePush_NoGCI1KB(b *testing.B) {
+	benchmarkMessagePushNoGCI(1024, b)
+}
+
+func BenchmarkMessagePush_GCI10KB(b *testing.B) {
+	benchmarkMessagePushGCI(10*1024, b)
+}
+
+func BenchmarkMessagePush_NoGCI10KB(b *testing.B) {
+	benchmarkMessagePushNoGCI(10*1024, b)
+}
+func BenchmarkMessagePush_GCI100KB(b *testing.B) {
+	benchmarkMessagePushGCI(100*1024, b)
+}
+
+func BenchmarkMessagePush_NoGCI100KB(b *testing.B) {
+	benchmarkMessagePushNoGCI(100*1024, b)
+}
+
+func BenchmarkMessagePush_GCI1MB(b *testing.B) {
+	benchmarkMessagePushGCI(1024*1024, b)
+}
+
+func BenchmarkMessagePush_NoGCI1MB(b *testing.B) {
+	benchmarkMessagePushNoGCI(1024*1024, b)
 }
