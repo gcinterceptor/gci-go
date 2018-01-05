@@ -2,6 +2,7 @@ package gccontrol
 
 import (
 	"math"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -17,6 +18,8 @@ func newUnavailabilityEstimator(size int) *unavailabilityEstimator {
 }
 
 type unavailabilityEstimator struct {
+	sync.Mutex
+
 	clock clock.Clock // Internal clock, making it easier to test with time.
 
 	gcNext       int        // Next index in gcPast.
@@ -31,11 +34,17 @@ type unavailabilityEstimator struct {
 }
 
 func (u *unavailabilityEstimator) gcStarted() {
+	u.Lock()
+	defer u.Unlock()
+
 	n := u.clock.Now()
 	u.gcStart = &n
 }
 
 func (u *unavailabilityEstimator) gcFinished() {
+	u.Lock()
+	defer u.Unlock()
+
 	// Silently ignore calls gcFinished without previous gcStarted.
 	if u.gcStart == nil {
 		return
@@ -43,11 +52,11 @@ func (u *unavailabilityEstimator) gcFinished() {
 
 	// Estimate GC duration.
 	u.gcPast[u.gcNext] = u.clock.Now().Sub(*u.gcStart).Nanoseconds()
-	atomic.StoreInt64(&u.gcEstimation, maxDuration(u.gcPast))
+	u.gcEstimation = maxDuration(u.gcPast)
 
 	// Estimate request duration.
 	u.reqPast[u.gcNext] = u.estimateReqDuration()
-	atomic.StoreInt64(&u.reqEstimation, maxDuration(u.reqPast))
+	u.reqEstimation = maxDuration(u.reqPast)
 
 	u.reqCount = 0
 	u.reqMean = 0
@@ -68,6 +77,9 @@ func (u *unavailabilityEstimator) estimateReqDuration() int64 {
 }
 
 func (u *unavailabilityEstimator) estimate(queueSize int64) time.Duration {
+	u.Lock()
+	defer u.Unlock()
+
 	trailingReqs := int64(0)
 	if queueSize > 0 {
 		reqDur := atomic.LoadInt64(&u.reqEstimation)
@@ -87,6 +99,9 @@ func (u *unavailabilityEstimator) estimate(queueSize int64) time.Duration {
 // Flags that a request has been finished. This is needed to estimate the request duration. The latter
 // is used to estimate the amout of time to process enqueued requests.
 func (u *unavailabilityEstimator) requestFinished(d time.Duration) {
+	u.Lock()
+	defer u.Unlock()
+
 	// Fast and more accurate (compared to the naive approach) way of computing variance. Proposed by
 	// B. P. Welford and presented in Donald Knuth’s Art of Computer Programming, Vol 2, page 232, 3rd
 	// edition.
