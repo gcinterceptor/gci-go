@@ -8,17 +8,30 @@ To tackle this problem, we have developed the Garbage Collector Control Intercep
 
 ## Performance
 
-**Message Push benchmark**
+**Setup**
 
-Worst message push service time
+* GCI-go: v0.2
+* SO: Ubuntu 16.04.3 LTS (xenial)
+* Server: 4GB RAM, 2 vCPUs (amd64), 2397.222 MHz (4794.44 bogomips), 4096 KB cache size 
 
-|Statistic|GCI Off (ms)  |GCI On (ms) | Improvement (%) |
-|---------|------------- |------------|-----------------|
-|Median   |	13704.544    |4957.355    |63.82%           |
-|Average  |	13642.15321  |4963.28354  |63.61            |
-|Std Dev  |	1889.425185  |1314.098334 |30.44%           |
+**Results: Go 1.8**
 
-More information and detailed benchmark results can be found [here](https://github.com/gcinterceptor/gci-go/tree/master/benchmarks/msgpush).
+```sh
+ubuntu@msgpush:~/go/src/github.com/gcinterceptor/gci-go/gccontrol$ go test -bench=_NoGCI -benchtime=5s
+BenchmarkMessagePush_NoGCI1KB-2     	   30000	    248985 ns/op	   4.11 MB/s
+BenchmarkMessagePush_NoGCI10KB-2    	   30000	    285606 ns/op	  35.85 MB/s
+BenchmarkMessagePush_NoGCI100KB-2   	   20000	    384649 ns/op	 266.22 MB/s
+BenchmarkMessagePush_NoGCI1MB-2     	   10000	   1246398 ns/op	 841.28 MB/s
+PASS
+ok  	github.com/gcinterceptor/gci-go/gccontrol	51.154s
+ubuntu@msgpush:~/go/src/github.com/gcinterceptor/gci-go/gccontrol$ go test -bench=_GCI -benchtime=5s
+BenchmarkMessagePush_GCI1KB-2     	   30000	    236893 ns/op	   4.32 MB/s
+BenchmarkMessagePush_GCI10KB-2    	   30000	    267992 ns/op	  38.21 MB/s
+BenchmarkMessagePush_GCI100KB-2   	   20000	    319646 ns/op	 320.35 MB/s
+BenchmarkMessagePush_GCI1MB-2     	   10000	   1039922 ns/op	1008.32 MB/s
+PASS
+ok  	github.com/gcinterceptor/gci-go/gccontrol	46.701s
+```
 
 ## Installing GCI
 
