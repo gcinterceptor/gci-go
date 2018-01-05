@@ -9,14 +9,12 @@ import (
 func TestSampler_Update(t *testing.T) {
 	is := is.New(t)
 	s := newSampler(3)
-	s.update(10)
-	is.Equal(0, s.next) // Next shouldn't be updated at the first update.
 
 	// Checking if it is based on the minimum.
 	s.update(30)
 	s.update(35)
 	s.update(37)
-	is.Equal(int64(2), s.get())
+	is.Equal(int64(30), s.get())
 
 	// Checking bounds.
 	s.update(100)

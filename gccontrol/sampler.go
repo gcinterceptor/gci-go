@@ -14,10 +14,9 @@ const (
 )
 
 type sampler struct {
-	next         int     // Next index in the past slice.
-	past         []int64 // History of sample size between collections.
-	lastFinished int64   // Last number of finished requests.
-	curr         int64   // Current sample size.
+	next int     // Next index in the past slice.
+	past []int64 // History of sample size between collections.
+	curr int64   // Current sample size.
 }
 
 // newSampler creates a new sampler instance which is based on an history of size hs.
@@ -37,14 +36,9 @@ func (s *sampler) get() int64 {
 }
 
 func (s *sampler) update(finished int64) {
-	if s.lastFinished == 0 {
-		s.lastFinished = finished
-		return
-	}
 	// Update history.
-	s.past[s.next] = finished - s.lastFinished
+	s.past[s.next] = finished
 	s.next = (s.next + 1) % len(s.past)
-	s.lastFinished = finished
 
 	// Get minimum value.
 	min := s.past[0]
