@@ -23,6 +23,7 @@ var messagePush = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) 
 	}
 	buffer[msgCount%windowSize] = m
 	msgCount++
+	fmt.Fprint(w, m)
 })
 
 func main() {
