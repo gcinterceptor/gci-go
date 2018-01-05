@@ -21,34 +21,74 @@ Let's go down to the results.
 ## Executing the benchmark
 
 ```bash
-$ cd $GOPATH/src/github.com/gcinterceptor/gci-go/benchmarks/msgpush
-$ go build
-$ rm nogci.csv; for i in `seq 1 100`; do ./msgpush  | cut -d" " -f5 >> nogci.csv; done
-$ rm gci.csv; for i in `seq 1 100`; do ./msgpush --use_gci  | cut -d" " -f5 >> gci.csv; done
+$ cd $GOPATH/src/github.com/gcinterceptor/gci-go/gccontrol; go test -bench=_NoGCI -benchtime=5s
+$ cd $GOPATH/src/github.com/gcinterceptor/gci-go/gccontrol; go test -bench=_GCI -benchtime=5s
 ```
 
 ## Results
 
-### Dec, 27th 2017
+### Jan, 05 2018
 
 By @danielfireman
 
 **Setup**
-* Go: go1.8 linux/amd64
-* GCI-go: v0.1
+
+* GCI-go: v0.2
 * SO: Ubuntu 16.04.3 LTS (xenial)
-* Bench: windowSize 200000, msgCount 1000000
-* Server: 4GB RAM, 2 vCPUs, 2397.222 MHz (4794.44 bogomips), 4096 KB cache size
+* Server: 4GB RAM, 2 vCPUs (amd64), 2397.222 MHz (4794.44 bogomips), 4096 KB cache size 
 
-**Summary: Worst push time**
+**Go 1.8.5**
 
-|Statistic|GCI Off (ms)  |GCI On (ms) | Improvement (%) |
-|---------|------------- |------------|-----------------|
-|Median   |	13704.544    |4957.355    |63.82%           |
-|Average  |	13642.15321  |4963.28354  |63.61            |
-|Std Dev  |	1889.425185  |1314.098334 |30.44%           |
+```sh
+ubuntu@msgpush:~/go/src/github.com/gcinterceptor/gci-go/gccontrol$ gvm install go1.8.5
+Installing go1.8.5...
+ * Compiling...
+go1.8.5 successfully installed!
+ubuntu@msgpush:~/go/src/github.com/gcinterceptor/gci-go/gccontrol$ gvm use go1.8.5
+Now using version go1.8.5
+ubuntu@msgpush:~/go/src/github.com/gcinterceptor/gci-go/gccontrol$ export GOPATH=; go test -bench=_GCI -benchtime=5s
+BenchmarkMessagePush_GCI1KB-2     	   30000	    237353 ns/op	   4.31 MB/s
+BenchmarkMessagePush_GCI10KB-2    	   30000	    250845 ns/op	  40.82 MB/s
+BenchmarkMessagePush_GCI100KB-2   	   20000	    328557 ns/op	 311.67 MB/s
+BenchmarkMessagePush_GCI1MB-2     	   10000	   1078595 ns/op	 972.17 MB/s
+PASS
+ok  	github.com/gcinterceptor/gci-go/gccontrol	46.677s
+ubuntu@msgpush:~/go/src/github.com/gcinterceptor/gci-go/gccontrol$ export GOPATH=; go test -bench=_NoGCI -benchtime=5s
+BenchmarkMessagePush_NoGCI1KB-2     	   30000	    251491 ns/op	   4.07 MB/s
+BenchmarkMessagePush_NoGCI10KB-2    	   30000	    281357 ns/op	  36.40 MB/s
+BenchmarkMessagePush_NoGCI100KB-2   	   20000	    384976 ns/op	 265.99 MB/s
+BenchmarkMessagePush_NoGCI1MB-2     	    5000	   1217423 ns/op	 861.31 MB/s
+PASS
+ok  	github.com/gcinterceptor/gci-go/gccontrol	44.613s
+```
 
-**CSV files**
-* [GCI off](https://github.com/gcinterceptor/gci-go/blob/master/benchmarks/msgpush/2017_12_27_nogci.csv)
-* [GCI on](https://github.com/gcinterceptor/gci-go/blob/master/benchmarks/msgpush/2017_12_27_gci.csv)
+**Go 1.9.2**
+```sh
+ubuntu@msgpush:~/go/src/github.com/gcinterceptor/gci-go/gccontrol$ gvm install go1.9.2
+Installing go1.9.2...
+ * Compiling...
+go1.9.2 successfully installed!
+ubuntu@msgpush:~/go/src/github.com/gcinterceptor/gci-go/gccontrol$ gvm use go1.9.2
+Now using version go1.9.2
+ubuntu@msgpush:~/go/src/github.com/gcinterceptor/gci-go/gccontrol$ export GOPATH=; go test -bench=_GCI -benchtime=5s
+goos: linux
+goarch: amd64
+pkg: github.com/gcinterceptor/gci-go/gccontrol
+BenchmarkMessagePush_GCI1KB-2     	   30000	    256774 ns/op	   3.99 MB/s
+BenchmarkMessagePush_GCI10KB-2    	   30000	    258927 ns/op	  39.55 MB/s
+BenchmarkMessagePush_GCI100KB-2   	   20000	    332151 ns/op	 308.29 MB/s
+BenchmarkMessagePush_GCI1MB-2     	   10000	   1007804 ns/op	1040.46 MB/s
+PASS
+ok  	github.com/gcinterceptor/gci-go/gccontrol	45.133s
+ubuntu@msgpush:~/go/src/github.com/gcinterceptor/gci-go/gccontrol$ export GOPATH=; go test -bench=_NoGCI -benchtime=5s
+goos: linux
+goarch: amd64
+pkg: github.com/gcinterceptor/gci-go/gccontrol
+BenchmarkMessagePush_NoGCI1KB-2     	   30000	    261262 ns/op	   3.92 MB/s
+BenchmarkMessagePush_NoGCI10KB-2    	   30000	    270696 ns/op	  37.83 MB/s
+BenchmarkMessagePush_NoGCI100KB-2   	   20000	    376812 ns/op	 271.75 MB/s
+BenchmarkMessagePush_NoGCI1MB-2     	   10000	   1210644 ns/op	 866.13 MB/s
+PASS
+ok  	github.com/gcinterceptor/gci-go/gccontrol	50.135s
+```
 

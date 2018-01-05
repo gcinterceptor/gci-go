@@ -27,7 +27,11 @@ var messagePush = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) 
 
 func main() {
 	flag.Parse()
-	http.Handle("/", httphandler.GCI(messagePush))
+	if *useGCI {
+		http.Handle("/", httphandler.GCI(messagePush))
+	} else {
+		http.Handle("/", messagePush)
+	}
 	http.ListenAndServe(":3000", nil)
 	fmt.Println("hello")
 }
