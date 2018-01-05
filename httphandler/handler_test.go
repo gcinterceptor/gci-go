@@ -12,6 +12,27 @@ import (
 	"github.com/matryer/is"
 )
 
+func ExampleGCI() {
+	f := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, "Hi")
+	})
+	ts := httptest.NewServer(GCI(f))
+	defer ts.Close()
+
+	// Usual serving flow.
+	res, err := http.Get(ts.URL)
+	if err != nil {
+		panic(err)
+	}
+	b, err := ioutil.ReadAll(res.Body)
+	res.Body.Close()
+	if err != nil {
+		panic(err)
+	}
+	fmt.Print(string(b))
+	// Output: Hi
+}
+
 type fakeInterceptor struct {
 	shouldShed bool
 }
