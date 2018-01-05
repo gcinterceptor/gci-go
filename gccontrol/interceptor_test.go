@@ -130,7 +130,6 @@ func benchmarkMessagePushGCI(msgSize int64, b *testing.B) {
 	b.StopTimer()
 	b.SetBytes(msgSize)
 	gci := NewInterceptor()
-	defer debug.SetGCPercent(100) // Returning GC config to its default.
 	for i := 0; i < b.N; i++ {
 		sr := gci.Before()
 		if sr.ShouldShed {
@@ -141,6 +140,8 @@ func benchmarkMessagePushGCI(msgSize int64, b *testing.B) {
 		b.StopTimer()
 		gci.After(sr)
 	}
+	runtime.GC()
+	debug.SetGCPercent(100) // Returning GC config to its default.
 }
 
 func BenchmarkMessagePush_GCI1KB(b *testing.B) {
