@@ -43,6 +43,13 @@ func NewInterceptor() *Interceptor {
 	}
 }
 
+// SheddingInterceptor describes an interceptor which could advise the caller to shed (avoid)
+// the incoming request.
+type SheddingInterceptor interface {
+	Before() ShedResponse
+	After(ShedResponse)
+}
+
 // Interceptor manages the garbage collector activity reducing the tail
 // latency caused by CPU competition or stop-of-the-world pauses. It exposes
 // that should be invoked before and after the request processing.
