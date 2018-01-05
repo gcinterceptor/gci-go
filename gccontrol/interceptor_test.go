@@ -103,9 +103,7 @@ func TestInterceptor(t *testing.T) {
 	i.After(sr)
 }
 
-const msgSize = 100 * 1024
-
-func messagePush(i int) {
+func messagePush(msgSize int64, i int) {
 	const windowSize = 200000
 	var buffer [windowSize][]byte
 	m := make([]byte, msgSize)
@@ -123,7 +121,7 @@ func benchmarkMessagePushNoGCI(msgSize int64, b *testing.B) {
 	b.SetBytes(msgSize)
 	for i := 0; i < b.N; i++ {
 		b.StartTimer()
-		messagePush(i)
+		messagePush(msgSize, i)
 		b.StopTimer()
 	}
 }
@@ -139,7 +137,7 @@ func benchmarkMessagePushGCI(msgSize int64, b *testing.B) {
 			time.Sleep(sr.Unavailabity)
 		}
 		b.StartTimer()
-		messagePush(i)
+		messagePush(msgSize, i)
 		b.StopTimer()
 		gci.After(sr)
 	}
