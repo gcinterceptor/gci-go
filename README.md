@@ -9,6 +9,8 @@ To tackle this problem, we have developed the Garbage Collector Control Intercep
 ## Performance
 
 * Message Push benchmark description and results can be found [here](https://github.com/gcinterceptor/gci-go/blob/master/msgpush_benchmark.md).
+* GCI-go on the cloud:
+     * [2 instances](https://docs.google.com/spreadsheets/d/1ju6-5YsATb4bgRPKYmJAaxf0vhbg6XJE5QHlz-SSZnM/edit?usp=sharing).
 
 
 ## Installing GCI
