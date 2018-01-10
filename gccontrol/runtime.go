@@ -1,17 +1,19 @@
 package gccontrol
 
 import (
+	"math/rand"
 	"runtime"
 	"sync/atomic"
+	"time"
 )
 
 const (
 	// Default heap threshold rate should be fairly small, so the first collection happens quickly.
-	defaultSheddingThreshold = uint64(50 * 1e6)
+	defaultSheddingThreshold = uint64(50 * 1024 * 1024)
 
 	// There is no special reason for this constant.
 	// TODO(gcinterceptor): https://github.com/gcinterceptor/gci-go/issues/3
-	maxSheddingThreshold = uint64(512 * 1e6)
+	maxSheddingThreshold = uint64(512 * 1024 * 1024)
 )
 
 // rt is a tiny interface around the runtime to make tests easier.
@@ -66,9 +68,11 @@ type goHeap struct {
 
 // newHeap creates a new heap instance which is based on an history of size hs.
 func newHeap(hs int) *goHeap {
+	// TODO(danielfireman): Is this is the best place for this rand.Seed?
+	rand.Seed(time.Now().Unix())
 	return &goHeap{
 		past: make([]uint64, hs),
-		st:   defaultSheddingThreshold,
+		st:   defaultSheddingThreshold + uint64(rand.Float64()*(float64(maxSheddingThreshold)/3.0)),
 		rt:   &goRT{},
 	}
 }
@@ -79,8 +83,6 @@ func (h *goHeap) ShouldCollect() bool {
 
 func (h *goHeap) Collect() {
 	// Calculating the amount of heap consumed by request processing.
-	// Notice that (if there in no memory leak) the amount of heap after GC is what the
-	// is used to keep the server up. So called, the clean slate.
 	allocBeforeGC := h.rt.HeapAlloc()
 	h.rt.GC()
 	allocAfterGC := h.rt.HeapAlloc()
