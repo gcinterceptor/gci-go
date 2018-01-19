@@ -7,10 +7,10 @@ import (
 
 const (
 	// Default sample rate should be fairly small, so big requests get checked up quickly.
-	defaultSampleRate = 10
+	defaultSampleRate = 64
 	// Max sample rate can not be very big because of peaks.
 	// The algorithm is fairly conservative, but we never know.
-	maxSampleRate = 30
+	maxSampleRate = 512
 )
 
 type sampler struct {
