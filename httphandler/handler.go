@@ -18,7 +18,7 @@ func newGCIHandler(gci gccontrol.SheddingInterceptor, next http.Handler) http.Ha
 		sr := gci.Before()
 		defer gci.After(sr)
 		if sr.ShouldShed {
-			w.Header().Add("Retry-After", fmt.Sprintf("%.6f", sr.Unavailabity.Seconds()))
+			w.Header().Set("Retry-After", fmt.Sprintf("%.6f", sr.Unavailabity.Seconds()))
 			w.WriteHeader(http.StatusServiceUnavailable)
 			return
 		}
