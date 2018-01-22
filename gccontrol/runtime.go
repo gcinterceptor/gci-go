@@ -1,6 +1,7 @@
 package gccontrol
 
 import (
+	"fmt"
 	"math/rand"
 	"runtime"
 	"sync/atomic"
@@ -9,11 +10,11 @@ import (
 
 const (
 	// Default heap threshold rate should be fairly small, so the first collection happens quickly.
-	defaultSheddingThreshold = uint64(50 * 1024 * 1024)
+	defaultSheddingThreshold = uint64(16 * 1024 * 1024)
 
 	// There is no special reason for this constant.
 	// TODO(gcinterceptor): https://github.com/gcinterceptor/gci-go/issues/3
-	maxSheddingThreshold = uint64(512 * 1024 * 1024)
+	maxSheddingThreshold = uint64(256 * 1024 * 1024)
 )
 
 // rt is a tiny interface around the runtime to make tests easier.
@@ -60,35 +61,38 @@ type heap interface {
 }
 
 type goHeap struct {
-	next int      // Next index in the past slice.
-	past []uint64 // History of heap consumption between collections.
-	st   uint64   // Shedding treshold.
-	rt   rt       // System runtime.
+	next      int      // Next index in the past slice.
+	past      []uint64 // History of heap consumption between collections.
+	st        uint64   // Shedding treshold.
+	rt        rt       // System runtime.
+	lastAlloc uint64   // Number of bytes allocated after last GC.
+	lastUsed  uint64   // Number of bytes used since last GC.
 }
 
 // newHeap creates a new heap instance which is based on an history of size hs.
 func newHeap(hs int) *goHeap {
 	// TODO(danielfireman): Is this is the best place for this rand.Seed?
-	rand.Seed(time.Now().Unix())
+	rand.Seed(time.Now().UnixNano())
+	rt := &goRT{}
 	return &goHeap{
-		past: make([]uint64, hs),
-		st:   defaultSheddingThreshold + uint64(rand.Float64()*(float64(maxSheddingThreshold)/3.0)),
-		rt:   &goRT{},
+		past:      make([]uint64, hs),
+		st:        defaultSheddingThreshold + uint64(rand.Float64()*(float64(defaultSheddingThreshold))),
+		rt:        rt,
+		lastAlloc: rt.HeapAlloc(),
 	}
 }
 
 func (h *goHeap) ShouldCollect() bool {
-	return h.rt.HeapAlloc() >= atomic.LoadUint64(&h.st)
+	h.lastUsed = h.rt.HeapAlloc() - h.lastAlloc
+	return h.lastUsed >= atomic.LoadUint64(&h.st)
 }
 
 func (h *goHeap) Collect() {
-	// Calculating the amount of heap consumed by request processing.
-	allocBeforeGC := h.rt.HeapAlloc()
 	h.rt.GC()
-	allocAfterGC := h.rt.HeapAlloc()
+	h.lastAlloc = h.rt.HeapAlloc()
 
 	// Update the history with the memory consumed processing requests.
-	h.past[h.next] = allocBeforeGC - allocAfterGC
+	h.past[h.next] = h.lastUsed
 	h.next = (h.next + 1) % len(h.past)
 
 	// Updating the shedding threshold.
@@ -98,6 +102,8 @@ func (h *goHeap) Collect() {
 	} else {
 		atomic.StoreUint64(&h.st, max)
 	}
+
+	fmt.Println(h.past, h.st)
 }
 
 func maxUint64(s []uint64) uint64 {

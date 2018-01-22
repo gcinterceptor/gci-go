@@ -40,12 +40,14 @@ func TestHeap_Collect(t *testing.T) {
 
 	// First cycle: amount of heap allocated to process requests is 20.
 	rt.alloc = 20
+	h.ShouldCollect() // It is needed to call ShouldCollect because it updates the lastUsed.
 	h.Collect()
 	is.Equal([]uint64{20, 0}, h.past)
 	is.Equal(uint64(20), h.st)
 
 	// Second cycle: amount of heap allocated to process requests is 30.
 	rt.alloc = 30
+	h.ShouldCollect()
 	h.Collect()
 	is.Equal([]uint64{20, 30}, h.past)
 	is.Equal(uint64(30), h.st)
@@ -54,6 +56,7 @@ func TestHeap_Collect(t *testing.T) {
 	// * Shedding threshold should be bound by max.
 	// * Past should go back to the beginning.
 	rt.alloc = maxSheddingThreshold + 1
+	h.ShouldCollect()
 	h.Collect()
 	is.Equal([]uint64{maxSheddingThreshold + 1, 30}, h.past)
 	is.Equal(maxSheddingThreshold, h.st)
