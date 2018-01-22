@@ -125,6 +125,6 @@ func (i *Interceptor) shed() ShedResponse {
 func (i *Interceptor) After(r ShedResponse) {
 	if !r.ShouldShed {
 		atomic.AddInt64(&i.finished, 1)
-		i.estimator.requestFinished(i.clock.Now().Sub(r.startTime))
+		i.estimator.requestFinished(i.clock.Since(r.startTime))
 	}
 }

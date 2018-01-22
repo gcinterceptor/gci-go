@@ -51,7 +51,7 @@ func (u *unavailabilityEstimator) gcFinished() {
 	}
 
 	// Estimate GC duration.
-	u.gcPast[u.gcNext] = u.clock.Now().Sub(*u.gcStart).Nanoseconds()
+	u.gcPast[u.gcNext] = u.clock.Since(*u.gcStart).Nanoseconds()
 	u.gcEstimation = maxDuration(u.gcPast)
 
 	// Estimate request duration.
