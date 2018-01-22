@@ -17,9 +17,9 @@ func TestSampler_Update(t *testing.T) {
 	is.Equal(int64(30), s.get())
 
 	// Checking bounds.
-	s.update(100)
-	s.update(200)
-	s.update(300)
+	s.update(maxSampleRate)
+	s.update(maxSampleRate + 100)
+	s.update(maxSampleRate + 1000)
 	is.Equal(int64(maxSampleRate), s.get())
 
 	// When zero, curr must not be updated.
