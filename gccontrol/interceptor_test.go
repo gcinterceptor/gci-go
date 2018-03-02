@@ -1,6 +1,7 @@
 package gccontrol
 
 import (
+	"math"
 	"runtime"
 	"runtime/debug"
 	"sync/atomic"
@@ -12,18 +13,20 @@ import (
 )
 
 type fakeHeap struct {
-	hasCollected  bool
-	shouldCollect bool
-	hasChecked    bool
+	goHeap
+	hasCollected bool
+	alloc        uint64
+	hasChecked   bool
 }
 
-func (h *fakeHeap) ShouldCollect() bool {
+func (h *fakeHeap) AllocSinceLastGC() uint64 {
 	h.hasChecked = true
-	return h.shouldCollect
+	return h.alloc
 }
 
-func (h *fakeHeap) Collect() {
+func (h *fakeHeap) Collect() uint64 {
 	h.hasCollected = true
+	return h.alloc
 }
 
 func (h *fakeHeap) Reset() {
@@ -35,16 +38,18 @@ func TestInterceptor(t *testing.T) {
 	is := is.New(t)
 	heap := &fakeHeap{}
 	sampler := newSampler(1)
+	st := &st{}
 
 	clock := clock.NewMock()
 	i := Interceptor{
-		clock:     clock,
-		heap:      heap,
-		sampler:   sampler,
-		estimator: newUnavailabilityEstimator(1),
+		clock:   clock,
+		heap:    heap,
+		sampler: sampler,
+		st:      st,
 	}
 
 	sampler.curr = 2
+
 	// First round: Sampling time, but not GC time.
 	sr := i.Before()
 	is.True(!sr.ShouldShed)   // Not yet sampling time.
@@ -61,7 +66,7 @@ func TestInterceptor(t *testing.T) {
 
 	// Second round: Sampling and GC time.
 	heap.Reset()
-	heap.shouldCollect = true
+	heap.alloc = math.MaxUint64
 
 	r1 := i.Before()          // Again, it is not yet sampling time.
 	is.True(!sr.ShouldShed)   // Again, it is not yet sampling time.
@@ -71,7 +76,6 @@ func TestInterceptor(t *testing.T) {
 
 	r2 := i.Before()
 	is.True(r2.ShouldShed) // Sampling and GC time.
-	is.Equal(time.Millisecond, r2.Unavailabity)
 
 	runtime.Gosched() // Yielding the processor to the cleaning goroutine.
 	for {
@@ -83,7 +87,6 @@ func TestInterceptor(t *testing.T) {
 
 	r3 := i.Before()
 	is.True(r2.ShouldShed) // GC is happening.
-	is.Equal(time.Millisecond, r2.Unavailabity)
 
 	i.After(r1)
 	i.After(r2)
@@ -133,14 +136,13 @@ func benchmarkMessagePushGCI(msgSize int64, b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		sr := gci.Before()
 		if sr.ShouldShed {
-			time.Sleep(sr.Unavailabity)
+			continue
 		}
 		b.StartTimer()
 		messagePush(msgSize, i)
 		b.StopTimer()
 		gci.After(sr)
 	}
-	runtime.GC()
 	debug.SetGCPercent(100) // Returning GC config to its default.
 }
 

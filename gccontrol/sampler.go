@@ -14,14 +14,14 @@ const (
 )
 
 type sampler struct {
-	next int     // Next index in the past slice.
-	past []int64 // History of sample size between collections.
-	curr int64   // Current sample size.
+	next int      // Next index in the past slice.
+	past []uint64 // History of sample size between collections.
+	curr uint64   // Current sample size.
 }
 
 // newSampler creates a new sampler instance which is based on an history of size hs.
 func newSampler(hs int) *sampler {
-	p := make([]int64, hs)
+	p := make([]uint64, hs)
 	for i := 0; i < hs; i++ {
 		p[i] = math.MaxInt64
 	}
@@ -31,11 +31,11 @@ func newSampler(hs int) *sampler {
 	}
 }
 
-func (s *sampler) get() int64 {
-	return atomic.LoadInt64(&s.curr)
+func (s *sampler) Get() uint64 {
+	return atomic.LoadUint64(&s.curr)
 }
 
-func (s *sampler) update(finished int64) {
+func (s *sampler) Update(finished uint64) {
 	// Update history.
 	s.past[s.next] = finished
 	s.next = (s.next + 1) % len(s.past)
@@ -51,9 +51,9 @@ func (s *sampler) update(finished int64) {
 	// Apply bounds.
 	if min > 0 {
 		if min > maxSampleRate { // NOTE: we could use math.Min. We tried that, but it leads to a lot of type casting.
-			atomic.StoreInt64(&s.curr, maxSampleRate)
+			atomic.StoreUint64(&s.curr, maxSampleRate)
 		} else {
-			atomic.StoreInt64(&s.curr, min)
+			atomic.StoreUint64(&s.curr, min)
 		}
 	}
 }

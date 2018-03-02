@@ -12,8 +12,8 @@ import (
 func newUnavailabilityEstimator(size int) *unavailabilityEstimator {
 	return &unavailabilityEstimator{
 		clock:   clock.New(),
-		gcPast:  make([]int64, size),
-		reqPast: make([]int64, size),
+		gcPast:  make([]uint64, size),
+		reqPast: make([]uint64, size),
 	}
 }
 
@@ -23,14 +23,14 @@ type unavailabilityEstimator struct {
 	clock clock.Clock // Internal clock, making it easier to test with time.
 
 	gcNext       int        // Next index in gcPast.
-	gcEstimation int64      // Current estimation of the next GC duration in nanoseconds.
+	gcEstimation uint64     // Current estimation of the next GC duration in nanoseconds.
 	gcStart      *time.Time // Last GC start time.
-	gcPast       []int64    // History of garbage collection duration estimations in nanoseconds.
+	gcPast       []uint64   // History of garbage collection duration estimations in nanoseconds.
 
-	reqCount        int     // Number of requests finished since last collection.
-	reqPast         []int64 // History of request duration estimations in nanoseconds.
-	reqMean, reqVar float64 // Request statistics in nanoseconds. Made them float to make math easier.
-	reqEstimation   int64   // Current request duration estimation in nanoseconds.
+	reqCount        int      // Number of requests finished since last collection.
+	reqPast         []uint64 // History of request duration estimations in nanoseconds.
+	reqMean, reqVar float64  // Request statistics in nanoseconds. Made them float to make math easier.
+	reqEstimation   uint64   // Current request duration estimation in nanoseconds.
 }
 
 func (u *unavailabilityEstimator) gcStarted() {
@@ -51,7 +51,7 @@ func (u *unavailabilityEstimator) gcFinished() {
 	}
 
 	// Estimate GC duration.
-	u.gcPast[u.gcNext] = u.clock.Since(*u.gcStart).Nanoseconds()
+	u.gcPast[u.gcNext] = uint64(u.clock.Since(*u.gcStart).Nanoseconds())
 	u.gcEstimation = maxDuration(u.gcPast)
 
 	// Estimate request duration.
@@ -65,7 +65,7 @@ func (u *unavailabilityEstimator) gcFinished() {
 	u.gcStart = nil
 }
 
-func (u *unavailabilityEstimator) estimateReqDuration() int64 {
+func (u *unavailabilityEstimator) estimateReqDuration() uint64 {
 	// Estimate the time processing a request.
 	// Using 68–95–99.7 rule to have a good coverage on the request size.
 	// https://en.wikipedia.org/wiki/68%E2%80%9395%E2%80%9399.7_rule
@@ -73,16 +73,16 @@ func (u *unavailabilityEstimator) estimateReqDuration() int64 {
 	if u.reqCount > 1 {
 		stdDev = math.Sqrt(u.reqVar) / float64(u.reqCount-1)
 	}
-	return int64(u.reqMean + (3 * stdDev))
+	return uint64(u.reqMean + (3 * stdDev))
 }
 
-func (u *unavailabilityEstimator) estimate(queueSize int64) time.Duration {
+func (u *unavailabilityEstimator) estimate(queueSize uint64) time.Duration {
 	u.Lock()
 	defer u.Unlock()
 
-	trailingReqs := int64(0)
+	trailingReqs := uint64(0)
 	if queueSize > 0 {
-		reqDur := atomic.LoadInt64(&u.reqEstimation)
+		reqDur := atomic.LoadUint64(&u.reqEstimation)
 		// This can happen at the very first call (no GC has yet happened).
 		if reqDur == 0 {
 			reqDur = u.estimateReqDuration()
@@ -93,7 +93,7 @@ func (u *unavailabilityEstimator) estimate(queueSize int64) time.Duration {
 	if u.gcStart != nil {
 		diff = u.clock.Now().Sub(*u.gcStart)
 	}
-	return time.Duration(atomic.LoadInt64(&u.gcEstimation)+trailingReqs) - diff
+	return time.Duration(atomic.LoadUint64(&u.gcEstimation)+trailingReqs) - diff
 }
 
 // Flags that a request has been finished. This is needed to estimate the request duration. The latter
@@ -117,8 +117,8 @@ func (u *unavailabilityEstimator) requestFinished(d time.Duration) {
 	}
 }
 
-func maxDuration(s []int64) int64 {
-	max := int64(0)
+func maxDuration(s []uint64) uint64 {
+	max := uint64(0)
 	for _, d := range s {
 		if d > max {
 			max = d

@@ -1,7 +1,6 @@
 package httphandler
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/gcinterceptor/gci-go/gccontrol"
@@ -18,7 +17,6 @@ func newGCIHandler(gci gccontrol.SheddingInterceptor, next http.Handler) http.Ha
 		sr := gci.Before()
 		defer gci.After(sr)
 		if sr.ShouldShed {
-			w.Header().Set("Retry-After", fmt.Sprintf("%.6f", sr.Unavailabity.Seconds()))
 			w.WriteHeader(http.StatusServiceUnavailable)
 			return
 		}
