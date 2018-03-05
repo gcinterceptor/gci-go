@@ -75,5 +75,4 @@ func TestGCI(t *testing.T) {
 	}
 	res1.Body.Close()
 	is.Equal(http.StatusServiceUnavailable, res1.StatusCode)
-	is.True(res1.Header.Get("Retry-After") != "") // Retry-After header must be set.
 }
