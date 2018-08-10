@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"runtime"
+	"runtime/debug"
 )
 
 const (
@@ -14,6 +15,8 @@ const (
 // GCI returns the GCI HTTP handler, which controls Go's GC to decrease service tail latency.
 // Ideally, GCI handler should be the first middleware in the service process chain.
 func GCI(next http.HandlerFunc) http.HandlerFunc {
+	debug.SetGCPercent(-1)
+	fmt.Println("==< Automatic GC Disabled <==")
 	return func(w http.ResponseWriter, r *http.Request) {
 		switch r.Header.Get(gciHeader) {
 		case "":
