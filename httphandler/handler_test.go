@@ -28,7 +28,8 @@ func ExampleGCI() {
 		panic(err)
 	}
 	fmt.Print(string(b))
-	// Output: Hi
+	// Output: ==< Automatic GC Disabled <==
+	// Hi
 }
 
 var handlerMessage = "Foo"
